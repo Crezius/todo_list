@@ -1,26 +1,61 @@
+
+
+
+
 <?php
-	$erreurs = "";
-	// connect to database
-	$bdd = mysqli_connect("localhost", "me", "mdp", "todo_list");
 
-	// insert a quote if submit button is clicked
-	if (isset($_POST['ajouter'])) {
-		if (empty($_POST['message'])) {
-			$erreurs = "Y'a un p'tit problème pendant l'insertion, pourquoi ça n'ajoute pas";
-		}else{
-			$message = $_POST['message'];
-			$sql = "INSERT INTO todo_list (message) VALUES ('$message')";
-			mysqli_query($bdd, $sql);
-			header('location: index.php');
-		}
-	}	
+function base()
+ {
+ $dbhost = "localhost";
+ $dbuser = "me";
+ $dbpass = "mdp";
+ $db = "todo_list";
+ $indice = 0; 
+    
+    try
+	{
+		$bdd = new PDO('mysql:host=localhost;dbname='.$db.';charset=utf8', $dbuser, $dbpass);
+        $bdd ->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
-  if (isset($_GET['supprimer'])) {
-	$indice = $_GET['supprimer'];
+	}
+	catch (Exception $e)
+	{
+			die('Erreur : ' . $e->getMessage());
+	}
+    
+    
+	if (isset($_GET["id"])){
+             
+        
+        $stmt = $bdd->prepare("DELETE FROM liste WHERE id=?");
+        $stmt->execute(array($_GET['id']));
 
-	mysqli_query($bdd, "DELETE FROM todo_list WHERE id=".$indice);
-	header('location: index.php');
-  }   
+        echo "<p>test</p>";
+		//$bdd->query("DELETE FROM liste WHERE id=".$_GET["id"]."");
+	}
+	
+	if (isset($_POST["tache"])){
+        
+                echo "<p>test</p>";
+
+		$message = $_POST['tache'];
+        
+        if($message != ""){
+            $stmt = $bdd->prepare("INSERT INTO liste (tache) VALUES (?)");
+            $stmt->execute(array($message));
+        }
+        
+		//$bdd->query("INSERT INTO liste (tache) VALUES ('".sanitize_string($message)."')");
+	}
+	
+	$reponse = $bdd->query('SELECT id, tache FROM liste');
+	
+	while ($donnees = $reponse->fetch())
+	{
+		echo "<li id=croix".$indice."><a id=\"croix\" href=\"#\" onclick=\"supprimer(".$donnees['id'].",".$indice.")\"> x </a>".$donnees['tache']."</li>";
+        $indice++;
+	}
+}
 ?>
 
 <!DOCTYPE html>
@@ -28,46 +63,50 @@
 
 <head>
     <meta charset="utf-8">
-    
-</head>
+   
+    <style>
+			#croix{
+				color:white;
+				text-decoration:none;
+				right:5%;
+				background-color:red;
+                margin-right: 2vw;
+				padding-right:5px;
+				padding-left:5px;
+			}
+			ul{
+				list-style:none;
+			}
+		</style>
+    </head>
+		
+	<body> 
+        <script>
 
-<body>
-    
-    <div>
-		<h2>TODO LIST</h2>
-	</div>
-	<form method="post" action="index.php">
-		<input type="text" name="message">
-		<button type="submit" name="ajouter" id="ajout_btn">Add Task</button>
-	</form>
-    
-    <table>
-	<thead>
-		<tr>
-			<th>N</th>
-			<th style="width: 60px;">Tasks</th>
-			<th style="width: 60px;">Action</th>
-		</tr>
-	</thead>
+            function supprimer(id, id_liste){
+                const xhr_object = new XMLHttpRequest();
+                xhr_object.open('DELETE', `http://localhost/DIP/todoo/index.php?id=${id}`);
+                xhr_object.send();
+                var list = document.getElementById("todoliste");
+                list.removeChild(list.childNodes[id_liste]);
+            }
 
-	<tbody>
-		<?php 
-		// select all tasks if page is visited or refreshed
-		$message = mysqli_query($bdd, "SELECT * FROM todo_list");
+        </script>
+	
+	    
+	
+		<h1>TODOO</h1>
+		<form action="index.php" method="post">
+					 <input type="text" name="tache"/>
+					 <input type="submit" value="Ajouter">
+		</form>
 
-		$numero = 1; while ($msg = mysqli_fetch_array($message)) { ?>
-			<tr>
-				<td> <?php echo $numero; ?> </td>
-				<td> <?php echo $msg['message']; ?> </td>
-				<td> 
-					<a href="index.php?supprimer=<?php echo $msg['id'] ?>">x</a> 
-				</td>
-			</tr>
-		<?php $numero++; } ?>	
-	</tbody>
-</table>
-
-    
-</body>
-
+        <ul id="todoliste">
+            <?php
+                base();
+            ?>
+        </ul>
+                
+	</body>
 </html>
+
